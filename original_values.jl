@@ -20,9 +20,11 @@ LOAD_CHANGE_EVENTS_test = [
 Removes one bus from SG_BUSES_test and adds it to GFL_BUSES_test
 """
 
-global SG_BUSES_test  = [33, 35, 37, 38, 39]
+global SG_BUSES_test  = [39]
 global GFM_BUSES_test = [31, 36]
-global GFL_BUSES_test = [30, 34, 32]
+global GFL_BUSES_test = [30, 34, 32, 33, 35, 37, 38]
+
+# 30;34;32;33;35;37;38,
 
 include("ieee39_main_run.jl")
 

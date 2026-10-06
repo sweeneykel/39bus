@@ -1,59 +1,72 @@
-using Combinatorics
-
-using CSV, DataFrames
-using Plots
+#=
+GFM_BUSES_sandbox = [31,32,22,29, 36]
+GFL_BUSES_sandbox = [30, 34, 32]
+GFM_BUSES_origs = Int[]
 
 function plot_apex(csv_file::String)
 
     df = CSV.read(csv_file, DataFrame)
 
-    # DataFrame(list_GFL=list_GFL_busses,  bus_number=bus,  apex=max_val, nadir=min_val)
+    # Expected CSV format:
+    #
+    # list_GFL          bus_number    apex    nadir
+    # "30;34;32;33"     30            ...     ...
+    #
+    # list_GFL is stored as a String in one CSV cell.
 
 
     # ---------------------------------------------------------
     # Prepare GFL configuration labels
     # ---------------------------------------------------------
 
-    # Example CSV entry:
-    # "[30, 34, 32, 33]"
+    # Keep a readable label for the x-axis
     #
-    # Convert to:
+    # "30;34;32;33"
+    # ->
     # "30, 34, 32, 33"
 
-    df.GFL_label = replace.(df.list_GFL, "[" => "", "]" => "")
+    df.GFL_label = [
+        join(strip.(split(config, ";")), ", ")
+        for config in df.list_GFL
+    ]
 
     # Count how many buses are in each GFL configuration
     df.GFL_count = [
-        length(split(label, ","))
-        for label in df.GFL_label
+        length(split(config, ";"))
+        for config in df.list_GFL
     ]
 
+
+    # ---------------------------------------------------------
     # Find unique GFL configurations
+    # ---------------------------------------------------------
+
     groups = unique(
-        select(df, [:GFL_label, :GFL_count])
+        select(df, [:list_GFL, :GFL_label, :GFL_count])
     )
 
     # Sort first by number of GFL buses,
-    # then by the actual configuration
+    # then by configuration
     sort!(groups, [:GFL_count, :GFL_label])
+
 
     # ---------------------------------------------------------
     # Give each GFL configuration its own x-axis position
     # ---------------------------------------------------------
 
     group_to_x = Dict(
-        row.GFL_label => i
+        row.list_GFL => i
         for (i, row) in enumerate(eachrow(groups))
     )
 
     df.x_position = [
-        group_to_x[label]
-        for label in df.GFL_label
+        group_to_x[config]
+        for config in df.list_GFL
     ]
 
     tick_positions = 1:nrow(groups)
-
     tick_labels = groups.GFL_label
+
 
     # ---------------------------------------------------------
     # Create plot
@@ -78,6 +91,7 @@ function plot_apex(csv_file::String)
         size = (1200, 700)
     )
 
+
     # ---------------------------------------------------------
     # Fixed colors based ONLY on generator type
     # ---------------------------------------------------------
@@ -85,6 +99,7 @@ function plot_apex(csv_file::String)
     GFL_COLOR = :purple
     SG_COLOR  = :green
     GFM_COLOR = :orange
+
 
     # ---------------------------------------------------------
     # Plot data
@@ -99,25 +114,27 @@ function plot_apex(csv_file::String)
 
         for row in eachrow(bus_df)
 
-            # Convert the GFL configuration string back
-            # into bus numbers
+            # Convert:
             #
-            # "30, 34, 32, 33"
-            # ->
+            # "30;34;32;33"
+            #
+            # into:
+            #
             # [30, 34, 32, 33]
 
             gfl_buses = parse.(
                 Int,
-                strip.(split(row.GFL_label, ","))
+                strip.(split(row.list_GFL, ";"))
             )
 
+            
             # Determine generator type for THIS configuration
 
             if bus in gfl_buses
 
                 point_color = GFL_COLOR
 
-            elseif bus in GFM_BUSES_orig
+            elseif bus in GFM_BUSES_origs
 
                 point_color = GFM_COLOR
 
@@ -126,6 +143,7 @@ function plot_apex(csv_file::String)
                 point_color = SG_COLOR
 
             end
+
 
             scatter!(
                 p,
@@ -196,12 +214,14 @@ function plot_apex(csv_file::String)
         unique(groups.GFL_count)
     )
 
+
     # Current y-axis limits
     ylims_current = ylims(p)
 
     y_range =
         ylims_current[2] -
         ylims_current[1]
+
 
     # Leave some room above data for labels
     new_ymax =
@@ -213,6 +233,7 @@ function plot_apex(csv_file::String)
         ylims_current[1],
         new_ymax
     )
+
 
     # Position of "4 GFL", "5 GFL", etc.
     label_y =
@@ -271,55 +292,34 @@ function plot_apex(csv_file::String)
 
 end
 
-global test_name = splitext(basename(@__FILE__))[1]  #"testname"
+function save_max_min_dur_freq_metrics_for_bus_sandbox(test_name::String, list_GFL_busses::Vector{Int}, bus::Int, outdir::String;  fname::Union{Nothing,String} = nothing,)
+    # makes a folder in plots called "test_name" if folder doesn't already exist.
+    mkpath(outdir)  #plots/test_name
+    
 
-GFL_PLL_KP_test = 0.03          #PLL Kp
-GFL_PLL_KI_test = 1.5           #PLL Ki
+    # get the min and max frequency values
+    max_val = 2
+    min_val = 1
 
-# DON'T MODIFY!
-const SYS_BASE_MVA = 100.0
+    # format what should be stored
+    df_save = DataFrame(list_GFL=join(list_GFL_busses, ";"),  bus_number=bus,  apex=max_val, nadir=min_val)
 
-#For larger sudden load steps, tighten solver tolerances for numerical stability
-LOAD_CHANGE_EVENTS_test = [
-    Dict(
-        :buses        => [35],                            #Buses with load-step events
-        :event_time_s => 0.1,                             #Load-step time[s]
-        :p_pu_map     => Dict(35 => 70.0 / SYS_BASE_MVA), #Active-power load step[p.u.]
-        :q_pu_map     => Dict(35 => 10.0 / SYS_BASE_MVA), #Reactive-power load step[p.u.]
-    ),
-]
+    # if fname is not yet set, set it to a formatted filename like "incr_GFL_quant_freq_iteration05.csv"
+    fname === nothing && (fname = "max_min_freq.csv")
+    fpath = joinpath(outdir, fname)
 
-"""
-Removes one bus from SG_BUSES_test and adds it to GFL_BUSES_test
-"""
+    # check if file exists and has content (>0 bytes)
+    file_has_data = isfile(fpath) && filesize(fpath) > 0
 
-SG_BUSES_orig  = [33, 35, 37, 38, 39]
-global GFM_BUSES_test = [31, 36]
-GFL_BUSES_orig = [30, 34, 32]
-
-# Bus 39 must always remain synchronous
-convertible_SG = filter(bus -> bus != 39, SG_BUSES_orig)
-
-for n_convert in 1:length(convertible_SG)
-
-    for buses_to_convert in combinations(convertible_SG, n_convert)
-
-        global SG_BUSES_test  = copy(SG_BUSES_orig)
-        global GFL_BUSES_test = copy(GFL_BUSES_orig)
-
-        append!(GFL_BUSES_test, buses_to_convert)
-
-        filter!(
-            bus -> bus ∉ buses_to_convert,
-            SG_BUSES_test
-        )
-        
-        include("ieee39_main_run.jl")
-    end
+    # append without re-writing the header if the file already contains data
+    CSV.write(fpath, df_save; append = file_has_data, writeheader = !file_has_data)
+    
+    return fpath
 end
 
-#path_to_freq_apex = joinpath(joinpath(joinpath(pwd(), "plots"), test_name), "max_min_freq.csv")
 
-#plot_apex(path_to_freq_apex)
+#save_max_min_dur_freq_metrics_for_bus_sandbox("sandbox_test", GFM_BUSES_sandbox, 3, pwd())
 
-
+plt_sandbox = plot_apex("max_min_freq.csv")
+savefig(plt_sandbox, joinpath(pwd(),"_my_sandbox_test_apex_plot.png"))
+=#

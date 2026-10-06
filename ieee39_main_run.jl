@@ -1100,9 +1100,11 @@ end
 Saves the largest number, smallest number into a csv along with the iteration and bus number.
 TO be used with simulations. 
 Uses same df as save_frequency_csv_for_bus
+save_max_min_dur_freq_metrics_for_bus(test_name, GFL_BUSES_test, results, sys, b, simdir; t_step = minimum(load_event_times; init = 1.0))
+
 
 """
-function save_max_min_dur_freq_metrics_for_bus(test_name::String, list_GFL_busses, results, sys::System, bus::Int, outdir::String;
+function save_max_min_dur_freq_metrics_for_bus(test_name::String, list_GFL_busses::Vector{Int}, results, sys::System, bus::Int, outdir::String;
                                     fname::Union{Nothing,String} = nothing, t_step::Float64 = 1.0)
     # makes a folder in plots called "test_name" if folder doesn't already exist.
     mkpath(outdir)  #plots/test_name
@@ -1127,7 +1129,7 @@ function save_max_min_dur_freq_metrics_for_bus(test_name::String, list_GFL_busse
     # TODO: get duration until steady state, stability of system
 
     # format what should be stored
-    df_save = DataFrame(list_GFL=list_GFL_busses,  bus_number=bus,  apex=max_val, nadir=min_val)
+    df_save = DataFrame(list_GFL=join(list_GFL_busses, ";"),  bus_number=bus,  apex=max_val, nadir=min_val)
 
     # if fname is not yet set, set it to a formatted filename like "incr_GFL_quant_freq_iteration05.csv"
     fname === nothing && (fname = "max_min_freq.csv")
@@ -2849,7 +2851,7 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
     print_final_steady_state_freq(results, sys; buses = gen_buses)
     print_terminal_pq_final_summary(results, sys; buses = gen_buses)
 
-#=    
+  
 #Plots
     plot_terminal_pq_panels(results, sys, PLOT_BUSES_EXT, plotsdir, load_event_times, load_event_summary)
     if net !== nothing
@@ -3002,7 +3004,7 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
     if show_plot
         display(combined)
     end
-=#
+
 
     @info "DONE. All CSVs and plots written." outdir = outdir plots = plotsdir csv = csvdir
     return sys, results
