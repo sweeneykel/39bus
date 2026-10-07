@@ -2861,7 +2861,16 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
     plot_voltage_deviation_panel(results, sys, gen_buses, load_event_times, load_event_summary, plotsdir)
     save_individual_voltage_plots(results, sys, gen_buses, voltpdfdir, load_event_times, load_event_summary;
                                   t_step = minimum(load_event_times; init = 0.25))
+    
+    path_to_freq_csv = joinpath(simdir, "max_min_freq.csv")
 
+    p_apex_title = build_panel_title_julia("Change in frequency apex per bus for various configs of GFL", load_event_summary)
+    p_nadir_title = build_panel_title_julia("Change in frequency nadir per bus for various configs of GFL", load_event_summary)
+    p_apex = plot_apex(path_to_freq_csv, p_apex_title)
+    p_nadir = plot_nadir(path_to_freq_csv, p_nadir_title)
+
+    savefig(p_apex, joinpath(simdir, "apex.png"))
+    savefig(p_nadir, joinpath(simdir, "nadir.png"))
 
 #Per-bus frequency plots
     for b in gen_buses

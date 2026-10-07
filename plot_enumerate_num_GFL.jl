@@ -1,9 +1,7 @@
-using Combinatorics
-
 using CSV, DataFrames
 using Plots
 
-function plot_apex(csv_file::String)
+function plot_apex(csv_file::String, apex_title::String)
 
     df = CSV.read(csv_file, DataFrame)
 
@@ -75,7 +73,7 @@ function plot_apex(csv_file::String)
     p = plot(
         xlabel = "GFL Bus Configuration",
         ylabel = "Δf [Hz]",
-        title = "Frequency apex per bus for different combinations of GFL and SG",
+        title = apex_title,
 
         xticks = (
             tick_positions,
@@ -86,8 +84,9 @@ function plot_apex(csv_file::String)
 
         legend = :outerright,
 
-        bottom_margin = 10Plots.mm,
-        top_margin = 10Plots.mm,
+        left_margin = 10 * Plots.mm,
+        bottom_margin = 18 * Plots.mm,
+        top_margin = 10 * Plots.mm,
 
         size = (1200, 700)
     )
@@ -247,7 +246,7 @@ function plot_apex(csv_file::String)
 end
 
 
-function plot_nadir(csv_file::String)
+function plot_nadir(csv_file::String, nadir_title::String)
 
     df = CSV.read(csv_file, DataFrame)
 
@@ -317,8 +316,8 @@ function plot_nadir(csv_file::String)
     # ---------------------------------------------------------
 
     p = plot(
-        title = "Frequency nadir per bus for different combinations of GFL and SG",
-        xlabel = "GFL Bus Configuration",
+        title = nadir_title,
+        xlabel = "Buses with GFL inverter",
         ylabel = "Δf [Hz]",
 
         xticks = (
@@ -329,9 +328,10 @@ function plot_nadir(csv_file::String)
         xrotation = 45,
 
         legend = :outerright,
-
-        bottom_margin = 10Plots.mm,
-        top_margin = 10Plots.mm,
+        
+        left_margin = 10 * Plots.mm,
+        bottom_margin = 18 * Plots.mm,
+        top_margin = 10 * Plots.mm,
 
         size = (1200, 700)
     )

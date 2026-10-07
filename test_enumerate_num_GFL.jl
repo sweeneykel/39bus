@@ -1,3 +1,5 @@
+using Combinatorics
+
 include("plot_enumerate_num_GFL.jl")
 
 global test_name = splitext(basename(@__FILE__))[1]  #"testname"
@@ -61,6 +63,7 @@ for n_convert in 1:length(convertible_SG)
     end
 end
 
+#=
 this_test_dir = joinpath(joinpath(pwd(), "plots"), test_name)
 path_to_freq_csv = joinpath(this_test_dir, "max_min_freq.csv")
 
@@ -69,3 +72,4 @@ p_nadir = plot_nadir(path_to_freq_csv)
 
 savefig(p_apex, joinpath(this_test_dir, "apex.png"))
 savefig(p_nadir, joinpath(this_test_dir, "nadir.png"))
+=#
