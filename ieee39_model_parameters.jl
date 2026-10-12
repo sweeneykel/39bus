@@ -1,7 +1,7 @@
 # IEEE-39 model parameters
 
-# Moved to testing files because used in LOAD_CHANGE_EVENTS_test
-#const SYS_BASE_MVA = 100.0     #System base[MVA]
+
+const SYS_BASE_MVA = 100.0     #System base[MVA]
 const F_BASE       = 60.0      #Nominal frequency[Hz]
 const Ω_BASE_RAD_S = 2π * F_BASE     #Nominal angular frequency[rad/s]
 
@@ -27,10 +27,10 @@ const SOLVER_DTMAX     = 1e-3   #Maximum solver step[s] #  IDA maximum step[s]  
 #SG/GFM/GFL bus groups
 
 
-SG_BUSES  = SG_BUSES_test      #Synchronous-generator buses
-GFM_BUSES = GFM_BUSES_test       #Grid-forming inverter buses
-GFL_BUSES = GFL_BUSES_test         #Grid-following inverter buses
-PLOT_BUSES_EXT = vcat(SG_BUSES, GFM_BUSES, GFL_BUSES)               #Buses shown in plots
+const SG_BUSES  = [33, 35, 37, 38, 39]      #Synchronous-generator buses
+const GFM_BUSES = [31, 36]       #Grid-forming inverter buses
+const GFL_BUSES = [30, 34, 32]         #Grid-following inverter buses
+const PLOT_BUSES_EXT = [30, 31, 34, 36, 35]               #Buses shown in plots
 
 const R_SG_PU  = 0.05              #SG speed droop[p.u.]
 const R_GFM_PU = 0.08      #GFM speed droop[p.u.]
@@ -42,8 +42,8 @@ const R_GFM_PU = 0.08      #GFM speed droop[p.u.]
 #PLL and inverter droop defaults
 
 
-const GFL_PLL_KP = GFL_PLL_KP_test    #PLL Kp
-const GFL_PLL_KI = GFL_PLL_KI_test         #PLL Ki
+const GFL_PLL_KP = 0.03    #PLL Kp
+const GFL_PLL_KI = 1.5          #PLL Ki
 
 
 #Important Note to User  regarding GFL  kω_droop::Float64 = GFL_KW_DEFAULT

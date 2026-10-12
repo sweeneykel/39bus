@@ -58,7 +58,15 @@ const FAULT_X_PU = 0.0   # Fault reactance [pu]
 # Load-step case
 
 #For larger sudden load steps, tighten solver tolerances for numerical stability
-LOAD_CHANGE_EVENTS = LOAD_CHANGE_EVENTS_test
+const LOAD_CHANGE_EVENTS = [
+    Dict(
+        :buses        => [35],                            #Buses with load-step events
+        :event_time_s => 0.1,                             #Load-step time[s]
+        :p_pu_map     => Dict(35 => 70.0 / SYS_BASE_MVA), #Active-power load step[p.u.]
+        :q_pu_map     => Dict(35 => 10.0 / SYS_BASE_MVA), #Reactive-power load step[p.u.]
+    ),
+]
+
 
 #validation
 function validate_partitions!(sg::Vector{Int}, gfm::Vector{Int}, gfl::Vector{Int})
@@ -1093,56 +1101,6 @@ function save_rotor_angle_csv_for_bus(results, sys::System, bus::Int, outdir::St
     fpath = joinpath(outdir, fname)
     CSV.write(fpath, df_out)
     @info "Saved rotor-angle deviation CSV" bus = bus label = lab state = string(sym) file = fpath resampled = RESAMPLE_FOR_CSV export_dt = EXPORT_DT
-    return fpath
-end
-
-"""
-Saves the largest number, smallest number into a csv along with the iteration and bus number.
-TO be used with simulations. 
-Uses same df as save_frequency_csv_for_bus
-save_max_min_dur_freq_metrics_for_bus(test_name, GFL_BUSES_test, results, sys, b, simdir; t_step = minimum(load_event_times; init = 1.0))
-
-
-"""
-function save_max_min_dur_freq_metrics_for_bus(test_name::String, list_GFL_busses::Vector{Int}, results, sys::System, bus::Int, outdir::String;
-                                    fname::Union{Nothing,String} = nothing, t_step::Float64 = 1.0)
-    # makes a folder in plots called "test_name" if folder doesn't already exist.
-    mkpath(outdir)  #plots/test_name
-    
-    # creates df_out
-    series = frequency_deviation_hz_at_bus(results, sys, bus)
-    if series === nothing
-        @warn "Cannot export CSV: no frequency series found" bus = bus
-        return nothing
-    end
-    t, df, lab, sym = series
-    if RESAMPLE_FOR_CSV
-        tg = uniform_grid_with_event(TF_SIM, EXPORT_DT, t_step)
-        df = interp1_linear(t, df, tg)
-        t  = tg
-    end
-    df_out = DataFrame(t_s = t, df_hz = df)
-
-    # get the min and max frequency values
-    max_val = maximum(df_out.df_hz)
-    min_val = minimum(df_out.df_hz)
-    # TODO: get duration until steady state, stability of system
-
-    # format what should be stored
-    df_save = DataFrame(list_GFL=join(list_GFL_busses, ";"),  bus_number=bus,  apex=max_val, nadir=min_val)
-
-    # if fname is not yet set, set it to a formatted filename like "incr_GFL_quant_freq_iteration05.csv"
-    fname === nothing && (fname = "max_min_freq.csv")
-    fpath = joinpath(outdir, fname)
-
-    # check if file exists and has content (>0 bytes)
-    file_has_data = isfile(fpath) && filesize(fpath) > 0
-
-    # append without re-writing the header if the file already contains data
-    CSV.write(fpath, df_save; append = file_has_data, writeheader = !file_has_data)
-
-    @info "Saved frequency simulation results" bus = bus label = lab state = string(sym) file = fpath resampled = RESAMPLE_FOR_CSV export_dt = EXPORT_DT
-    
     return fpath
 end
 
@@ -2681,7 +2639,6 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
 
     outdir   = pwd()
     plotsdir = joinpath(outdir, "plots")
-    simdir   = joinpath(plotsdir, test_name)
     csvdir   = joinpath(plotsdir, "csv")
     pfdir    = joinpath(plotsdir, "pf")
     freqpdfdir   = joinpath(plotsdir, "freq_bus30_39_pdfs")
@@ -2816,9 +2773,6 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
     for b in gen_buses
         save_frequency_csv_for_bus(results, sys, b, csvdir; t_step = minimum(load_event_times; init = 1.0))
         save_rotor_angle_csv_for_bus(results, sys, b, csvdir; t_step = minimum(load_event_times; init = 1.0))
-
-        save_max_min_dur_freq_metrics_for_bus(test_name, GFL_BUSES_test, results, sys, b, simdir; t_step = minimum(load_event_times; init = 1.0))
-        
         save_voltage_csv_for_bus(results, sys, b, csvdir; t_step = minimum(load_event_times; init = 1.0))
         save_terminal_pq_csv_for_bus(results, sys, b, csvdir; event_times = load_event_times)
     end
@@ -2851,7 +2805,6 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
     print_final_steady_state_freq(results, sys; buses = gen_buses)
     print_terminal_pq_final_summary(results, sys; buses = gen_buses)
 
-  
 #Plots
     plot_terminal_pq_panels(results, sys, PLOT_BUSES_EXT, plotsdir, load_event_times, load_event_summary)
     if net !== nothing
@@ -2861,16 +2814,6 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
     plot_voltage_deviation_panel(results, sys, gen_buses, load_event_times, load_event_summary, plotsdir)
     save_individual_voltage_plots(results, sys, gen_buses, voltpdfdir, load_event_times, load_event_summary;
                                   t_step = minimum(load_event_times; init = 0.25))
-    
-    path_to_freq_csv = joinpath(simdir, "max_min_freq.csv")
-
-    p_apex_title = build_panel_title_julia("Change in frequency apex per bus for various configs of GFL", load_event_summary)
-    p_nadir_title = build_panel_title_julia("Change in frequency nadir per bus for various configs of GFL", load_event_summary)
-    p_apex = plot_apex(path_to_freq_csv, p_apex_title)
-    p_nadir = plot_nadir(path_to_freq_csv, p_nadir_title)
-
-    savefig(p_apex, joinpath(simdir, "apex.png"))
-    savefig(p_nadir, joinpath(simdir, "nadir.png"))
 
 #Per-bus frequency plots
     for b in gen_buses
@@ -3014,10 +2957,8 @@ function main(; show_system::Bool = true, show_plot::Bool = false)
         display(combined)
     end
 
-
     @info "DONE. All CSVs and plots written." outdir = outdir plots = plotsdir csv = csvdir
     return sys, results
 end
-
 
 main(show_system = true, show_plot = false)
