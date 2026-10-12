@@ -119,7 +119,7 @@ const NETWORK_PQ_EXPORT_BUSES    = collect(30:39)   #Generator-side buses export
 
 const IEEE39_LOAD_BUSES_ALL = [1, 3, 4, 7, 8, 9, 12, 15, 16, 18, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 35]#IEEE-39 load buses
 const IEEE39_EXTRA_LOAD_BUSES = [b for b in IEEE39_LOAD_BUSES_ALL if !(b in collect(30:39))]#Load buses outside 30..39
-const EXPORT_EXTRA_LOAD_BUS_CSVS = true#Save load-bus voltage/PQ CSVs
+const EXPORT_EXTRA_LOAD_BUS_CSVS = true    #Save load-bus voltage/PQ/(and frequency?) CSVs
 
 
 # Inertia and damping
