@@ -27,9 +27,6 @@ include("ieee39_model_parameters.jl")
 # All functions that run simulation and process results
 include("ieee39_main_helper_funct.jl")
 
-# test_name = splitext(basename(@__FILE__))[1]
-test_name = "GFL_KW_DEFAULT"
-changing_param = GFL_KW_DEFAULT
 
 # Main run
 function main(test_name::String, changing_param; show_system::Bool = true, show_plot::Bool = false, test_max_freq::Bool = true)
@@ -390,5 +387,4 @@ end
 
 
 
-main(test_name, changing_param; show_system = true, show_plot = false, test_max_freq = true)
 

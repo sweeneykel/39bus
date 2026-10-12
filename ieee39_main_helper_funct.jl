@@ -31,6 +31,7 @@ const FAULT_X_PU = 0.0   # Fault reactance [pu]
 
 # Load-step case
 
+#=
 #For larger sudden load steps, tighten solver tolerances for numerical stability
 const LOAD_CHANGE_EVENTS = [
     Dict(
@@ -40,6 +41,7 @@ const LOAD_CHANGE_EVENTS = [
         :q_pu_map     => Dict(35 => 10.0 / SYS_BASE_MVA), #Reactive-power load step[p.u.]
     ),
 ]
+=#
 
 #validation
 function validate_partitions!(sg::Vector{Int}, gfm::Vector{Int}, gfl::Vector{Int})
