@@ -1102,8 +1102,62 @@ function save_frequency_csv_for_bus(results, sys::System, bus::Int, outdir::Stri
 end
 
 """
-Modification of save_frequency_csv_for_bus 
+Plots the max absolute frequency deviation over all time steps for all buses in a given simulation.
+    Does this for for increasing values a given independent_variable.
 """
+function plot_max_freq_deviation(csv_path::String, independent_var::String)
+
+    # Read CSV
+    df = CSV.read(csv_path, DataFrame)
+
+    # Sort by independent variable (ascending)
+    sort!(df, :independent_variable)
+
+    # Identify unique buses
+    buses = sort(unique(df.bus))
+
+    # Assign consistent colors to buses 30–39
+    bus_colors = Dict(
+        bus => palette(:tab10)[bus - 29]
+        for bus in 30:39
+    )
+
+    # Initialize plot
+    p = plot(
+        xlabel = independent_var,
+        ylabel = "Δ Frequency (Hz)",
+        title = "Maximum Absolute System Frequency Deviation",
+        legend = :outerright,
+        grid = true,
+        bottom_margin = 5Plots.mm
+    )
+
+    # Scatter plot, grouped by bus number
+    for bus in buses
+
+        bus_df = df[df.bus .== bus, :]
+
+        scatter!(
+            p,
+            bus_df.independent_variable,
+            bus_df.max_abs_sys_freq_dev,
+            label = "Bus $bus",
+            color = bus_colors[bus],
+            markersize = 6,
+            markerstrokewidth = 0
+        )
+    end
+
+    display(p)
+
+    return p
+end
+
+
+"""
+Modification of save_frequency_csv_for_bus. Creates a df with
+"""
+#save_max_freq_for_bus(results, sys, b, maxfreqdir; fname=fname_bus, t_step = minimum(load_event_times; init = 1.0))
 function save_max_freq_for_bus(results, sys::System, bus::Int, outdir::String;
                                     fname::Union{Nothing,String} = nothing, t_step::Float64 = 1.0)
     mkpath(outdir)
@@ -1139,6 +1193,7 @@ function save_max_freq_for_bus(results, sys::System, bus::Int, outdir::String;
 
     return fpath
 end
+
 
 # SG mechanical-power export
 function get_mechanical_power_dev_pu_at_bus(results, sys::System, bus::Int;
@@ -1274,7 +1329,7 @@ end
 
 function get_gfl_pref_eff_series(results, sys::System, bus::Int;
                                  pll_kp::Float64 = GFL_PLL_KP, pll_ki::Float64 = GFL_PLL_KI,
-                                 t_step::Float64 = 1.0, for_csv::Bool = false, for_plots::Bool = false)
+                                 t_step::Float64 = 1.0, for_csv::Bool = false, for_plots::Bool = false, GFL_KW_DEFAULT::Float64)
     dyn = dyn_inverter_at_bus(sys, bus)
     name = PSY.get_name(dyn)
     kp_use, ki_use = gfl_pll_gains_at_bus(sys, bus)
@@ -1304,7 +1359,7 @@ end
 function save_gfl_pref_eff_csv_for_bus(results, sys::System, bus::Int, outdir::String;
                                        fname::Union{Nothing,String} = nothing, t_step::Float64 = 1.0)
     mkpath(outdir)
-    out = get_gfl_pref_eff_series(results, sys, bus; t_step = t_step, for_csv = true)
+    out = get_gfl_pref_eff_series(results, sys, bus; t_step = t_step, for_csv = true, GFL_KW_DEFAULT)
     if out === nothing
         @warn "Skipping GFL effective active-power-reference CSV" bus = bus
         return nothing

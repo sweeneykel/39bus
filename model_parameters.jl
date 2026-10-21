@@ -1,7 +1,6 @@
-# IEEE-39 model parameters
+# responsibility: definitions of variables that will not change
 
-
-const SYS_BASE_MVA = 100.0     #System base[MVA]
+#const SYS_BASE_MVA = 100.0     #System base[MVA]
 const F_BASE       = 60.0      #Nominal frequency[Hz]
 const Ω_BASE_RAD_S = 2π * F_BASE     #Nominal angular frequency[rad/s]
 
@@ -23,13 +22,11 @@ const SOLVER_MAX_ORDER = 5      #IDA maximum order
 const SOLVER_INIT_DT   = 1e-3     #Initial solver step[s]
 const SOLVER_DTMAX     = 1e-3   #Maximum solver step[s] #  IDA maximum step[s]   ( here  An adaptive timestepBDF DAE solver)
 
-
 #SG/GFM/GFL bus groups
 
-
-const SG_BUSES  = [33, 35, 37, 38, 39]      #Synchronous-generator buses
-const GFM_BUSES = [31, 36]       #Grid-forming inverter buses
-const GFL_BUSES = [30, 34, 32]         #Grid-following inverter buses
+#const SG_BUSES  = [33, 35, 37, 38, 39]      #Synchronous-generator buses
+#const GFM_BUSES = [31, 36]       #Grid-forming inverter buses
+#const GFL_BUSES = [30, 34, 32]         #Grid-following inverter buses
 const PLOT_BUSES_EXT = [30, 31, 34, 36, 35]               #Buses shown in plots
 
 const R_SG_PU  = 0.05              #SG speed droop[p.u.]
@@ -41,9 +38,8 @@ const R_GFM_PU = 0.08      #GFM speed droop[p.u.]
 
 #PLL and inverter droop defaults
 
-
-const GFL_PLL_KP = 0.03    #PLL Kp
-const GFL_PLL_KI = 1.5          #PLL Ki
+#const GFL_PLL_KP = 0.03         #PLL Kp
+#const GFL_PLL_KI = 1.5          #PLL Ki
 
 
 #Important Note to User  regarding GFL  kω_droop::Float64 = GFL_KW_DEFAULT
@@ -55,13 +51,11 @@ const GFL_PLL_KI = 1.5          #PLL Ki
 # Users keeping the original PSID source file  should not pass Kω/ext=Dict("Kω"=>...);
 # use the default ActivePowerPI constructor   
 
-
-
-const GFL_KW_DEFAULT = 75.0         #GFL frequency-droop gain
-const GFL_KW_map_ext = Dict{Int,Float64}(
-    30 => GFL_KW_DEFAULT,              #Bus 30 GFL frequency-droop gain
-    31 => GFL_KW_DEFAULT,                    #Bus 31 GFL frequency-droop gain
-)
+#const GFL_KW_DEFAULT = 75.0         #GFL frequency-droop gain
+#const GFL_KW_map_ext = Dict{Int,Float64}(
+#    30 => GFL_KW_DEFAULT,              #Bus 30 GFL frequency-droop gain
+#    31 => GFL_KW_DEFAULT,                    #Bus 31 GFL frequency-droop gain
+#)
 
 const GFM_TA_DEFAULT = 2.0 * 4.2#GFM virtual-inertia time constant[s]
 const GFM_TA_map_ext = Dict{Int,Float64}(
@@ -89,7 +83,6 @@ const GFM_KD_map_ext = Dict{Int,Float64}(
 
 
 #Plot and export settings
-
 
 const ABS_VOLTAGE_YLIM   = (0.94, 1.08)           #Voltage plot y-limits[p.u.]
 const ABS_VOLTAGE_YTICKS = 0.94:0.02:1.08                #Voltage plot y-ticks[p.u.]
@@ -121,9 +114,7 @@ const IEEE39_LOAD_BUSES_ALL = [1, 3, 4, 7, 8, 9, 12, 15, 16, 18, 20, 21, 23, 24,
 const IEEE39_EXTRA_LOAD_BUSES = [b for b in IEEE39_LOAD_BUSES_ALL if !(b in collect(30:39))]#Load buses outside 30..39
 const EXPORT_EXTRA_LOAD_BUS_CSVS = true    #Save load-bus voltage/PQ/(and frequency?) CSVs
 
-
 # Inertia and damping
-
 
 const H_ALL_map_ext = Dict{Int,Float64}(
     30 => 4.200,#Bus 30 inertia constant[s]
@@ -149,10 +140,9 @@ const D_SG_map_ext = Dict{Int,Float64}(
     39 => 48.0 / D_SCALE,     #Bus 39 damping coefficient
 )
 
-
 #bus helpers
 
-is_sg_bus(bus::Int)  = bus in SG_BUSES
+is_sg_bus(bus::Int) = bus in SG_BUSES
 is_gfm_bus(bus::Int) = bus in GFM_BUSES
 is_gfl_bus(bus::Int) = bus in GFL_BUSES
 
@@ -199,6 +189,7 @@ function getGfmKd(bus::Int)
 end
 
 function getGflKw(bus::Int)
+    # looking for a global GFL_KW_DEFAULT
     haskey(GFL_KW_map_ext, bus) && return GFL_KW_map_ext[bus]
     @warn "No GFL kω found; using GFL_KW_DEFAULT" bus = bus model = model_label(bus)
     return GFL_KW_DEFAULT
@@ -252,8 +243,9 @@ const GFM_DEFAULT_PARAMS = (
     rg   = 0.04,#LCL grid-side resistance
 )
 
-const GFL_KW_DROOP_CAP = 35.0#GFL droop gain cap
 
+#=
+const GFL_KW_DROOP_CAP = 35.0#GFL droop gain cap
 const GFL_DEFAULT_PARAMS = (
     kp_p     = 0.8,#Active-power PI proportional gain
     ki_p     = 8.0,#Active-power PI integral gain
@@ -274,6 +266,7 @@ const GFL_DEFAULT_PARAMS = (
     lg       = 0.2,#LCL grid-side inductance
     rg       = 0.04,#LCL grid-side resistance
 )
+=#
 
 const GFL_MAIN_CALL_OVERRIDES = (
     kp_q = 2.0,#Reactive-power PI proportional gain

@@ -1,35 +1,24 @@
 #!/usr/bin/env julia
 
-#Main script for balanced EMT transient simulation of the IEEE 39-bus system.
-#also Includes additinal script for  small-signal stability analysis.
-using PowerSystems
-using PowerSimulationsDynamics
-using PowerFlows
-using Sundials
-using Plots
-using LinearAlgebra
-using Statistics
-using Dates
-using Printf
-using Logging
-using CSV
-using DataFrames
-using SparseArrays
-const PSY  = PowerSystems
-const PSID = PowerSimulationsDynamics
+function run_simulation(changing_param_value, updated_params; show_system::Bool = true, show_plot::Bool = false, simulation_test_type::String, independent_variable::String)
+    global SYS_BASE_MVA = updated_params.SYS_BASE_MVA_test
+	global SG_BUSES  =   updated_params.SG_BUSES_test
+	global GFM_BUSES = updated_params.GFM_BUSES_test
+	global GFL_BUSES = updated_params.GFL_BUSES_test
+	global GFL_PLL_KP = updated_params.GFL_PLL_KP_test
+	global GFL_PLL_KI = updated_params.GFL_PLL_KI_test
+	global GFL_KW_DEFAULT =  updated_params.GFL_KW_DEFAULT_test
+	global GFL_KW_DROOP_CAP = updated_params.GFL_KW_DROOP_CAP_test
+    global GFL_KW_map_ext = updated_params.GFL_KW_map_ext_test
+	global LOAD_CHANGE_EVENTS = updated_params.LOAD_CHANGE_EVENTS_test
+    global GFL_DEFAULT_PARAMS = updated_params.GFL_DEFAULT_PARAMS_test
 
-#Case data for tge 39 bus 
-include("case39_matpower.jl")
+    include("simulation_helper_funct.jl")
+    include("model_parameters.jl")  #
 
-# Model and export parameters
-include("ieee39_model_parameters.jl")
+    #Main script for balanced EMT transient simulation of the IEEE 39-bus system.
+    #also Includes additinal script for  small-signal stability analysis.
 
-# All functions that run simulation and process results
-include("ieee39_main_helper_funct.jl")
-
-
-# Main run
-function main(test_name::String, changing_param; show_system::Bool = true, show_plot::Bool = false, test_max_freq::Bool = true)
     validate_partitions!(SG_BUSES, GFM_BUSES, GFL_BUSES)
 
     outdir   = pwd()
@@ -200,23 +189,23 @@ function main(test_name::String, changing_param; show_system::Bool = true, show_
     print_terminal_pq_final_summary(results, sys; buses = gen_buses)
 
 # Max Frequency Study Per Iteration)
-    if test_max_freq == true
-        
+    if simulation_test_type == "test_max_freq"
+
         # Get the max frequency deviation for each bus (positive or negative)
-        maxfreqdir = joinpath(plotsdir, "test_max_freq_x_$(test_name)")
-        fname_bus = "each_bus_max_abs_freq_dev_x_$(test_name).csv"
+        maxfreqdir = joinpath(plotsdir, "test_max_freq_dev_x_$(independent_variable)")
+        fname_bus = "each_bus_test_max_freq_dev_x_$(independent_variable)=$(changing_param_value).csv"
         for b in gen_buses                  # 30...39             
             save_max_freq_for_bus(results, sys, b, maxfreqdir; fname=fname_bus, t_step = minimum(load_event_times; init = 1.0))
         end
 
-        # Get the max frequency deviation for the entire system
+        # Get the max frequency deviation for the entire system per independent variable
         df = CSV.read(joinpath(maxfreqdir, fname_bus), DataFrame)
         row_idx = argmax(df.max_freq_dev)
 
         # format what should be stored
-        df_save = DataFrame(independent_variable=changing_param, bus=df.bus_number[row_idx], max_abs_sys_freq_dev=df.max_freq_dev[row_idx])
+        df_save = DataFrame(independent_variable=changing_param_value, bus=df.bus_number[row_idx], max_abs_sys_freq_dev=df.max_freq_dev[row_idx])
 
-        fname_sys = "system_max_abs_freq_deviation_x_$(test_name).csv"
+        fname_sys = "system_max_abs_freq_dev_x_$(independent_variable).csv"
         fpath = joinpath(maxfreqdir, fname_sys)
 
         # check if file exists and has content (>0 bytes)
@@ -226,6 +215,11 @@ function main(test_name::String, changing_param; show_system::Bool = true, show_
         CSV.write(fpath, df_save; append = file_has_data, writeheader = !file_has_data)
 
         @info "Saved system max frequency deviation" file = fpath 
+
+        # Generate and Save Plots
+        p = plot_max_freq_deviation(fpath, independent_variable)
+        savefig(p, joinpath(maxfreqdir, "max_abs_freq_dev_x_$(independent_variable).png"))
+        savefig(p, joinpath(maxfreqdir, "max_abs_freq_dev_x_$(independent_variable).pdf"))
 
     end
 
@@ -310,7 +304,7 @@ function main(test_name::String, changing_param; show_system::Bool = true, show_
     end
 
     for b in GFL_BUSES
-        out = get_gfl_pref_eff_series(results, sys, b; t_step = minimum(load_event_times; init = 1.0), for_plots = true)
+        out = get_gfl_pref_eff_series(results, sys, b; t_step = minimum(load_event_times; init = 1.0), for_plots = true, GFL_KW_DEFAULT)
         out === nothing && continue
         t, p_ref_eff, Δp_ref_eff, p_ref_const, ω_pll, Kω, ωsym, label = out
         p = plot(t, Δp_ref_eff; title = build_panel_title_julia(@sprintf("GFL effective P-ref deviation at bus %d", b), load_event_summary),
